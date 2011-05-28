@@ -128,6 +128,7 @@ urlr_linkstore = linkstore.LinkStore(track_words,
 urlr.resolved_url_cb = \
     lambda orig, resolved:\
         urlr_linkstore.merge_resolved_link(orig, resolved)
-urlr.inaccessible_url_cb = lambda url: urlr_linkstore.remove(url)
+urlr.inaccessible_url_cb = \
+    lambda url, code: urlr_linkstore.remove_link(url)
 
 urlr.run();
