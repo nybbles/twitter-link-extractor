@@ -2,14 +2,22 @@ import pymongo
 from pymongo import Connection
 
 import urllib2
+import time
 import logging
 
+from threading import Thread
+
 class URLResolver(object):
+    running = False
+    
     resolved_urls = None
 
     def __init__(self, conn = Connection('localhost', 27017)):
         tle_db = conn['tle']
         self.resolved_urls = tle_db["resolved_urls"]
+
+    def get_mongodb_conn(self):
+        return self.resolved_urls.database.connection
 
     # lookup_url(url) ===> (resolved_url, is_resolved)
     def lookup_url(self, url):
@@ -41,3 +49,33 @@ class URLResolver(object):
                             "resolved" : True}}
         
         self.resolved_urls.update(new_entry)
+        return resolved_url
+
+    def resolve_unresolved_urls(self, cbs=[]):
+        query = {"resolved" : False}
+
+        while self.running:
+            result = self.resolved_urls.find_one(query)
+
+            if result is None:
+                time.sleep(10)
+                continue
+
+            url = result["url"]
+            resolved_url = self.resolve_url(url)
+
+            if resolved_url is None:
+                continue
+
+            for callback in cbs:
+                callback(url, resolved_url)
+
+    def run(self, cbs=[]):
+        if self.running:
+            return
+
+        self.running = True
+        Thread(target=self.resolve_unresolved_urls(cbs)).start()
+
+    def stop(self):
+        self.running = False

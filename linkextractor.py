@@ -111,3 +111,8 @@ tle = LinkExtractor(consumer_key, consumer_secret,
                     access_token, access_token_secret,
                     track_words, link_count_limit=10)
 tle.run()
+
+urlr = URLResolver()
+urlr_linkstore = LinkStore(track_words, conn=urlr.get_mongodb_conn())
+urlr.run(cbs=[lambda orig, resolved: \
+              urlr_linkstore.merge_resolved_link(orig, resolved)]);
