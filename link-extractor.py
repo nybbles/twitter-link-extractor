@@ -7,13 +7,14 @@ sys.path.append(tweepy_lib_loc)
 import tweepy as twpy
 from tweepy.error import TweepError
 
-class TwitterLinkExtractor(twpy.streaming.StreamListener):
-    extracted_link_count = {}
-    link_count_limit = None
+class StatusListener(twpy.streaming.StreamListener):
+    on_status_cb = None
 
-    def __init__(self, link_count_limit=10):
-        super(TwitterLinkExtractor, self).__init__()
-        self.link_count_limit = link_count_limit
+    def __init__(self, on_status_cb=None):
+        assert(on_status_cb is not None)
+
+        super(StatusListener, self).__init__()
+        self.on_status_cb = on_status_cb
 
     def on_error(self, status_code):
         err_str = "Error! %d" % (status_code)
@@ -21,6 +22,31 @@ class TwitterLinkExtractor(twpy.streaming.StreamListener):
     
     def on_timeout(self):
         raise TweepError("Timeout!")
+
+    def on_status(self, status):
+        self.on_status_cb(status)
+
+class LinkExtractor(object):
+    extracted_link_count = {}
+    link_count_limit = None
+
+    status_auth = None
+    status_listener = None
+    status_stream = None
+    
+    def __init__(self,
+                 consumer_key, consumer_secret, access_token,
+                 access_token_secret, track, link_count_limit=10):
+        self.status_auth = \
+            twpy.auth.OAuthHandler(consumer_key, consumer_secret, secure=True)
+        self.status_auth.set_access_token(access_token, access_token_secret)
+
+        on_status_cb = lambda x: self.on_status(x)
+        self.status_listener = StatusListener(on_status_cb)
+
+        self.status_stream = \
+            twpy.streaming.Stream(self.status_auth, self.status_listener)
+        self.status_stream.filter(track=track, async=True)
 
     def on_status(self, status):
         self.extract_links(status)
@@ -36,6 +62,9 @@ class TwitterLinkExtractor(twpy.streaming.StreamListener):
 
     def output_extracted_link(self, link):
         print link.encode('latin_1', 'replace')
+
+    def stop(self):
+        self.status_stream.disconnect()
 
 # This should be based on http://tools.ietf.org/html/rfc1808.html,
 # section 2.2, to detect all possible URLs, but it isn't, because this
@@ -57,12 +86,6 @@ consumer_secret = ""
 access_token = ""
 access_token_secret = ""
 
-tle_auth = \
-    twpy.auth.OAuthHandler(consumer_key, consumer_secret, secure=True)
-tle_auth.set_access_token(access_token, access_token_secret)
-
-tle = TwitterLinkExtractor()
-
-tle_stream = twpy.streaming.Stream(tle_auth, tle)
-
-tle_stream.filter(track=["vancouver"], async=True)
+tle = LinkExtractor(consumer_key, consumer_secret,
+                    access_token, access_token_secret,
+                    ["vancouver"], link_count_limit=10)
