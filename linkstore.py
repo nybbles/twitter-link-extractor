@@ -24,7 +24,11 @@ class LinkStore(object):
 
         self.links.update(query, update, upsert=True)
 
-    def merge_resolved_link(self, original_link, resolved_link):
+    def add_empty_link(self, link):
+        self.links.insert({"link" : link, "ntweets" : 0, "tweets" : []})
+
+    def merge_resolved_link\
+            (self, original_link, resolved_link, upsert_resolved=True):
         query = {"link" : original_link}
         result = self.links.find_and_modify(query, remove=True)
 
@@ -35,7 +39,9 @@ class LinkStore(object):
         update = {"$inc" : {"ntweets" : result["ntweets"]},
                   "$pushAll" : {"tweets" : result["tweets"]}}
 
-        self.links.update(query, update)
+        # Upsert allowed in case this is the first original link to be
+        # resolved to the resolved link (so the entry does not exist).
+        self.links.update(query, update, upsert=upsert_resolved)
 
     # Untested: A way of resolving links in bulk - just update all of
     # urls with the resolved urls and then do map/reduce.
