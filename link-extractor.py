@@ -48,6 +48,9 @@ class LinkExtractor(object):
             twpy.streaming.Stream(self.status_auth, self.status_listener)
         self.status_stream.filter(track=track, async=True)
 
+    def __del__(self):
+        self.status_stream.disconnect()
+
     def on_status(self, status):
         self.extract_links(status)
 
