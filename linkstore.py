@@ -22,7 +22,7 @@ class LinkStore(object):
         update = {"$inc" : {"nlinks" : 1},
                   "$push" : {"tweets" : tweet}}
 
-        links_coll.update(criteria, update, upsert=True)
+        self.links_coll.update(criteria, update, upsert=True)
 
 import datetime
 
