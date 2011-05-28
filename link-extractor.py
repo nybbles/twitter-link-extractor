@@ -25,8 +25,20 @@ class TwitterLinkExtractor(twpy.streaming.StreamListener):
     def extract_link(self, status):
         extract_link(status.text)
 
-def extract_link(text):
-    pass
+# This should be based on http://tools.ietf.org/html/rfc1808.html,
+# section 2.2, to detect all possible URLs, but it isn't, because this
+# is going to take a lot less time and seems to be what Twitter does.
+import re
+url_extractor_re = re.compile("(?P<url>https?://[^\s]+)", re.I)
+def extract_links(text):
+    links_iter = url_extractor_re.finditer(text)
+    links_remain = True
+
+    try:
+        while links_remain:
+            yield links_iter.next().group('url')
+    except StopIteration:
+        return
 
 consumer_key = ""
 consumer_secret = ""
