@@ -50,7 +50,10 @@ def get_tweet_author(tweet):
             "screen_name" : tweet.author.screen_name}
 
 def get_retweeted_status(tweet):
-    return {"id" : tweet.retweeted_status.id}
+    if "retweeted_status" in tweet.__dict__:
+        return {"id" : tweet.retweeted_status.id}
+    else:
+        return None
 
 def get_tweet_creation_date(tweet):
     return str(tweet.created_at)
