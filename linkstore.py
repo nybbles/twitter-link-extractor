@@ -1,28 +1,47 @@
 import pymongo
 from pymongo import Connection
 
+import urllib2
+
 class LinkStore(object):
     track_words = []
-    links_coll = None
+    links = None
+    resolved_urls = None
     
     def __init__(self, track_words):
         self.track_words = track_words
         
         conn = Connection('localhost', 27017)
         tle_db = conn['tle']
-        self.links_coll = tle_db[self.get_coll_name()]
+        self.links = tle_db[self.get_coll_name()]
+        self.resolved_urls = tle_db["resolved_urls"]
 
     def get_coll_name(self):
         return "%".join(self.track_words)
 
+    def resolve_url(self, url):
+        result = self.resolved_urls.find_one({"url" : url}, {"resolved_url" : 1})
+        
+        if result is not None:
+            return result['resolved_url']
+
+        resolved_url = urllib2.urlopen(url, None, 1).geturl()
+        
+        new_entry = {"url" : url, "resolved_url" : resolved_url}
+        self.resolved_urls.insert(new_entry)
+
+        return resolved_url
+
     def store_link_tweet(self, link, tweet):
+        link = self.resolve_url(link)
+        
         tweet = tweet_to_json(tweet)
 
         criteria = {"link" : link}
         update = {"$inc" : {"nlinks" : 1},
                   "$push" : {"tweets" : tweet}}
 
-        self.links_coll.update(criteria, update, upsert=True)
+        self.links.update(criteria, update, upsert=True)
 
 import datetime
 
