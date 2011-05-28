@@ -75,7 +75,7 @@ class URLResolver(object):
             return
 
         self.running = True
-        Thread(target=self.resolve_unresolved_urls(cbs)).start()
+        Thread(target=lambda : self.resolve_unresolved_urls(cbs)).start()
 
     def stop(self):
         self.running = False

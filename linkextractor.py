@@ -50,7 +50,7 @@ class LinkExtractor(object):
         self.track_words = track_words
 
         conn = pymongo.Connection('localhost', 27017)
-        self.link_store = linkstore.LinkStore(track_words=track, conn=conn)
+        self.link_store = linkstore.LinkStore(track_words=track_words, conn=conn)
         self.url_resolver = urlresolver.URLResolver(conn=conn)
 
         self.status_auth = \
@@ -112,7 +112,7 @@ tle = LinkExtractor(consumer_key, consumer_secret,
                     track_words, link_count_limit=10)
 tle.run()
 
-urlr = URLResolver()
-urlr_linkstore = LinkStore(track_words, conn=urlr.get_mongodb_conn())
+urlr = urlresolver.URLResolver()
+urlr_linkstore = linkstore.LinkStore(track_words, conn=urlr.get_mongodb_conn())
 urlr.run(cbs=[lambda orig, resolved: \
               urlr_linkstore.merge_resolved_link(orig, resolved)]);
