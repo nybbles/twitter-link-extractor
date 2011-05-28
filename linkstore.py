@@ -18,11 +18,42 @@ class LinkStore(object):
     def store_link_tweet(self, link, tweet):
         tweet = tweet_to_json(tweet)
 
-        criteria = {"link" : link}
+        query = {"link" : link}
         update = {"$inc" : {"ntweets" : 1},
                   "$push" : {"tweets" : tweet}}
 
-        self.links.update(criteria, update, upsert=True)
+        self.links.update(query, update, upsert=True)
+
+    def merge_resolved_link(self, original_link, resolved_link):
+        query = {"link" : original_link}
+        result = self.links.find_and_modify(query, remove=True)
+
+        if result is None:
+            return
+
+        query = {"link" : resolved_link}
+        update = {"$inc" : {"ntweets" : result["ntweets"]},
+                  "$pushAll" : {"tweets" : result["tweets"]}}
+
+        self.links.update(query, update)
+
+    # Untested: A way of resolving links in bulk - just update all of
+    # urls with the resolved urls and then do map/reduce.
+    def merge_resolved_links(self, resolved_link):
+        self.links.map_reduce(
+            "function() {\
+                 emit(this.link, {ntweets : this.ntweets, tweets : this.tweets});\
+            }",
+            "function(key, values) {\
+                 var result = {ntweets : 0, tweets : []};\
+                 values.forEach(function(value) {\
+                     result.ntweets += value.ntweets;\
+                     result.tweets = result.tweets.concat(value.tweets);\
+                 }\
+                 return result;\
+            }",
+            self.get_coll_name(),
+            reduce_output=self.get_coll_name())
 
 import datetime
 
