@@ -67,9 +67,9 @@ class URLResolver(object):
         else:
             raise err
         
-    def resolve_url(self, url):
+    def resolve_url(self, url, timeout=1):
         try:
-            resolved_url = urllib2.urlopen(url, None, 1).geturl()
+            resolved_url = urllib2.urlopen(url, None, timeout).geturl()
         except urllib2.HTTPError as e:
             self.handle_failed_resolve(e, url)
             return None
@@ -102,8 +102,14 @@ class URLResolver(object):
                 time.sleep(10)
                 continue
 
+            timeouts = result.get("timeouts", 0)
+            if timeouts > 0:
+                timeout = 5
+            else:
+                timeout = 1
+
             url = result["url"]
-            resolved_url = self.resolve_url(url)
+            resolved_url = self.resolve_url(url, timeout)
 
             if resolved_url is None:
                 continue
