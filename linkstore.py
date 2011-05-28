@@ -4,8 +4,8 @@ from pymongo import Connection
 class LinkStore(object):
     track_words = []
     links = None
-    
-    def __init__(self, track_words):
+
+    def __init__(self, track_words, conn = Connection('localhost', 27017)):
         self.track_words = track_words
         
         conn = Connection('localhost', 27017)
