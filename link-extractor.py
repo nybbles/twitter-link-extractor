@@ -8,6 +8,13 @@ import tweepy as twpy
 from tweepy.error import TweepError
 
 class TwitterLinkExtractor(twpy.streaming.StreamListener):
+    extracted_link_count = {}
+    link_count_limit = None
+
+    def __init__(self, link_count_limit=10):
+        super(TwitterLinkExtractor, self).__init__()
+        self.link_count_limit = link_count_limit
+
     def on_error(self, status_code):
         err_str = "Error! %d" % (status_code)
         raise TweepError(err_str)
@@ -19,7 +26,16 @@ class TwitterLinkExtractor(twpy.streaming.StreamListener):
         self.extract_links(status)
 
     def extract_link(self, status):
-        extract_link(status.text)
+        for link in extract_links(status.text):
+            updated_link_count = extracted_link_count.get(link, 0) + 1
+            
+            if updated_link_count == link_count_limit:
+                self.output_extracted_link(link)
+
+            extracted_link_count[link] = updated_link_count
+
+    def output_extracted_link(self, link):
+        print link.encode('latin_1', 'replace')
 
 # This should be based on http://tools.ietf.org/html/rfc1808.html,
 # section 2.2, to detect all possible URLs, but it isn't, because this
