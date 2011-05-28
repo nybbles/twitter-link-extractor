@@ -26,17 +26,22 @@ class StatusListener(twpy.streaming.StreamListener):
     def on_status(self, status):
         self.on_status_cb(status)
 
+import linkstore
+
 class LinkExtractor(object):
-    extracted_links = {}
     link_count_limit = None
 
     status_auth = None
     status_listener = None
     status_stream = None
+
+    link_store = None
     
     def __init__(self,
                  consumer_key, consumer_secret, access_token,
                  access_token_secret, track, link_count_limit=10):
+        self.link_store = linkstore.LinkStore(track_words=track)
+
         self.status_auth = \
             twpy.auth.OAuthHandler(consumer_key, consumer_secret, secure=True)
         self.status_auth.set_access_token(access_token, access_token_secret)
@@ -56,11 +61,8 @@ class LinkExtractor(object):
 
     def extract_links(self, status):
         for link in extract_links(status.text):
-            link_tweets = self.extracted_links.get(link, [])
-            link_tweets.append(status)
+            self.link_store.store_link_tweet(link, status)
             
-            self.extracted_links[link] = link_tweets
-
     def stop(self):
         self.status_stream.disconnect()
 
