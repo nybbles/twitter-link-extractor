@@ -16,11 +16,7 @@ class TwitterLinkExtractor(twpy.streaming.StreamListener):
         raise TweepError("Timeout!")
 
     def on_status(self, status):
-        self.extract_link(status)
-        print "%s at %s: %s" % \
-              tuple(map(lambda x: x.encode('latin-1'),
-                        (status.author.screen_name,
-                         str(status.created_at), status.text)))
+        self.extract_links(status)
 
     def extract_link(self, status):
         extract_link(status.text)
