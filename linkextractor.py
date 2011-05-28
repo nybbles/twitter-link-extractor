@@ -77,7 +77,7 @@ class LinkExtractor(object):
         self.extract_and_store_links(status)
 
     def extract_and_store_links(self, status):
-        for link in extract_links(status.text):
+        for link in extract_links(status.text, status.truncated):
             link, _ = self.url_resolver.lookup_url(link)
             self.link_store.store_link_tweet(link, status)
             
@@ -89,14 +89,19 @@ class LinkExtractor(object):
 # section 2.2, to detect all possible URLs, but it isn't, because this
 # is going to take a lot less time and seems to be what Twitter does.
 import re
-url_extractor_re = re.compile("(?P<url>https?://[^\s]+)", re.I)
-def extract_links(text):
+url_extractor_re = re.compile("(?P<url>https?://[^\s#@]+)", re.I | re.U)
+def extract_links(text, is_truncated):
     links_iter = url_extractor_re.finditer(text)
-    links_remain = True
 
     try:
-        while links_remain:
-            yield links_iter.next().group('url')
+        while True:
+            match = links_iter.next()
+            
+            if is_truncated:
+                if match.end('url') == 140 - 4:
+                    return # probably truncated URL
+                
+            yield match.group('url')
     except StopIteration:
         return
 
