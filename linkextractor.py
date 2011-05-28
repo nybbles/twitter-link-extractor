@@ -101,7 +101,12 @@ def extract_links(text, is_truncated):
                 if match.end('url') == 140 - 4:
                     return # probably truncated URL
                 
-            yield match.group('url')
+            result = match.group('url')
+
+            if result[-1] == u'\u2026':
+                return # url ends with ellipsis
+            
+            yield result
     except StopIteration:
         return
 
