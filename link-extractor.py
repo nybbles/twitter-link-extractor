@@ -27,7 +27,7 @@ class StatusListener(twpy.streaming.StreamListener):
         self.on_status_cb(status)
 
 class LinkExtractor(object):
-    extracted_link_count = {}
+    extracted_links = {}
     link_count_limit = None
 
     status_auth = None
@@ -56,15 +56,10 @@ class LinkExtractor(object):
 
     def extract_links(self, status):
         for link in extract_links(status.text):
-            updated_link_count = self.extracted_link_count.get(link, 0) + 1
+            link_tweets = self.extracted_links.get(link, [])
+            link_tweets.append(status)
             
-            if updated_link_count == self.link_count_limit:
-                self.output_extracted_link(link)
-
-            self.extracted_link_count[link] = updated_link_count
-
-    def output_extracted_link(self, link):
-        print link.encode('latin_1', 'replace')
+            self.extracted_links[link] = link_tweets
 
     def stop(self):
         self.status_stream.disconnect()
