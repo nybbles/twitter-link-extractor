@@ -2,6 +2,7 @@ import pymongo
 from pymongo import Connection
 
 import urllib2
+import logging
 
 class URLResolver(object):
     resolved_urls = None
@@ -29,7 +30,11 @@ class URLResolver(object):
         return url, False
         
     def resolve_url(self, url):
-        resolved_url = urllib2.urlopen(url, None, 1).geturl()
+        try:
+            resolved_url = urllib2.urlopen(url, None, 1).geturl()
+        except urllib2.URLError as e:
+            logging.info("Failed to resolve %s: %s" % (url, e.reason))
+            return None
 
         criteria = {"url" : url, "resolved" : False}
         update = {"$set" : {"resolved_url" : resolved_url,
