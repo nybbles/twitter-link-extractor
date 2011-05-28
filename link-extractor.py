@@ -25,14 +25,14 @@ class TwitterLinkExtractor(twpy.streaming.StreamListener):
     def on_status(self, status):
         self.extract_links(status)
 
-    def extract_link(self, status):
+    def extract_links(self, status):
         for link in extract_links(status.text):
-            updated_link_count = extracted_link_count.get(link, 0) + 1
+            updated_link_count = self.extracted_link_count.get(link, 0) + 1
             
-            if updated_link_count == link_count_limit:
+            if updated_link_count == self.link_count_limit:
                 self.output_extracted_link(link)
 
-            extracted_link_count[link] = updated_link_count
+            self.extracted_link_count[link] = updated_link_count
 
     def output_extracted_link(self, link):
         print link.encode('latin_1', 'replace')
