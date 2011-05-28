@@ -12,7 +12,16 @@ class URLResolver(object):
     
     resolved_urls = None
 
-    def __init__(self, conn = Connection('localhost', 27017)):
+    inaccessible_url_cb = None
+    resolved_url_cb = None
+
+    def __init__(self,
+                 conn = Connection('localhost', 27017),
+                 resolved_url_cb = None,
+                 inaccessible_url_cb = None):
+        self.resolved_url_cb = resolved_url_cb
+        self.inaccessible_url_cb = inaccessible_url_cb
+
         tle_db = conn['tle']
         self.resolved_urls = tle_db["resolved_urls"]
 
@@ -43,8 +52,13 @@ class URLResolver(object):
 
         if code == 404 or code == 403: # resource not found/forbidden
             logging.info("Failed to resolve %s: Not found" % (url))
-            self.set_url_as_resolved(url, url)
-        elif code == 408 or code == 503: # request timeout
+            if self.inaccessible_url_cb:
+                self.inaccessible_url_cb(url, code)
+                query = {"url" : url}
+                self.resolved_urls.remove(query)
+            else:
+                raise err
+        elif code == 408 or code == 503 or code == 500: # request timeout
             logging.info("Failed to resolve %s: Timeout" % (url))
             
             query = {"url" : url, "resolved" : False}
@@ -77,7 +91,7 @@ class URLResolver(object):
         self.resolved_urls.update(query, update)
         return resolved_url
 
-    def resolve_unresolved_urls(self, cbs=[]):
+    def resolve_unresolved_urls(self):
         sort = [("timeouts", 1)]
         query = {"resolved" : False}
 
@@ -94,15 +108,15 @@ class URLResolver(object):
             if resolved_url is None:
                 continue
 
-            for callback in cbs:
-                callback(url, resolved_url)
+            if self.resolved_url_cb:
+                self.resolved_url_cb(url, resolved_url)
 
-    def run(self, cbs=[]):
+    def run(self):
         if self.running:
             return
 
         self.running = True
-        Thread(target=lambda : self.resolve_unresolved_urls(cbs)).start()
+        Thread(target=self.resolve_unresolved_urls).start()
 
     def stop(self):
         self.running = False

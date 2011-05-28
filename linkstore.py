@@ -24,6 +24,10 @@ class LinkStore(object):
 
         self.links.update(query, update, upsert=True)
 
+    def remove_link(self, link):
+        query = {"link" : original_link}
+        self.links.remove(query)
+
     def add_empty_link(self, link):
         self.links.insert({"link" : link, "ntweets" : 0, "tweets" : []})
 

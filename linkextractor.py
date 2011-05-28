@@ -118,6 +118,11 @@ tle = LinkExtractor(consumer_key, consumer_secret,
 tle.run()
 
 urlr = urlresolver.URLResolver()
-urlr_linkstore = linkstore.LinkStore(track_words, conn=urlr.get_mongodb_conn())
-urlr.run(cbs=[lambda orig, resolved: \
-              urlr_linkstore.merge_resolved_link(orig, resolved)]);
+urlr_linkstore = linkstore.LinkStore(track_words,
+                                     conn=urlr.get_mongodb_conn())
+urlr.resolved_url_cb = \
+    lambda orig, resolved:\
+        urlr_linkstore.merge_resolved_link(orig, resolved)
+urlr.inaccessible_url_cb = lambda url: urlr_linkstore.remove(url)
+
+urlr.run();
