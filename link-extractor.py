@@ -57,11 +57,12 @@ consumer_secret = ""
 access_token = ""
 access_token_secret = ""
 
-twitterauth = \
+tle_auth = \
     twpy.auth.OAuthHandler(consumer_key, consumer_secret, secure=True)
-twitterauth.set_access_token(access_token, access_token_secret)
+tle_auth.set_access_token(access_token, access_token_secret)
 
-twitterlistener = TwitterLinkExtractor()
-twitterstream = twpy.streaming.Stream(twitterauth, twitterlistener)
+tle = TwitterLinkExtractor()
 
-twitterstream.filter(track=["vancouver"])
+tle_stream = twpy.streaming.Stream(tle_auth, tle)
+
+tle_stream.filter(track=["vancouver"], async=True)
