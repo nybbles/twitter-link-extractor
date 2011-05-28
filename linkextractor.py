@@ -60,7 +60,7 @@ class LinkExtractor(object):
         self.status_stream.filter(track=track, async=True)
 
     def __del__(self):
-        self.status_stream.disconnect()
+        self.stop()
 
     def on_status(self, status):
         self.extract_and_store_links(status)

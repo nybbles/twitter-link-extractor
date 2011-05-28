@@ -19,7 +19,7 @@ class LinkStore(object):
         tweet = tweet_to_json(tweet)
 
         criteria = {"link" : link}
-        update = {"$inc" : {"nlinks" : 1},
+        update = {"$inc" : {"ntweets" : 1},
                   "$push" : {"tweets" : tweet}}
 
         self.links.update(criteria, update, upsert=True)
