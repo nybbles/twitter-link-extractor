@@ -32,6 +32,8 @@ import linkstore
 import urlresolver
 
 class LinkExtractor(object):
+    running = False
+    track_words = None
     link_count_limit = None
 
     status_auth = None
@@ -43,7 +45,10 @@ class LinkExtractor(object):
     
     def __init__(self,
                  consumer_key, consumer_secret, access_token,
-                 access_token_secret, track, link_count_limit=10):
+                 access_token_secret, track_words, link_count_limit=10):
+        self.link_count_limit = link_count_limit
+        self.track_words = track_words
+
         conn = pymongo.Connection('localhost', 27017)
         self.link_store = linkstore.LinkStore(track_words=track, conn=conn)
         self.url_resolver = urlresolver.URLResolver(conn=conn)
@@ -57,7 +62,13 @@ class LinkExtractor(object):
 
         self.status_stream = \
             twpy.streaming.Stream(self.status_auth, self.status_listener)
-        self.status_stream.filter(track=track, async=True)
+
+    def run(self):
+        if self.running:
+            return
+
+        self.running = True
+        self.status_stream.filter(track=self.track_words, async=True)
 
     def __del__(self):
         self.stop()
@@ -72,6 +83,7 @@ class LinkExtractor(object):
             
     def stop(self):
         self.status_stream.disconnect()
+        self.running = False
 
 # This should be based on http://tools.ietf.org/html/rfc1808.html,
 # section 2.2, to detect all possible URLs, but it isn't, because this
@@ -93,6 +105,9 @@ consumer_secret = ""
 access_token = ""
 access_token_secret = ""
 
+track_words = ["vancouver"]
+
 tle = LinkExtractor(consumer_key, consumer_secret,
                     access_token, access_token_secret,
-                    ["vancouver"], link_count_limit=10)
+                    track_words, link_count_limit=10)
+tle.run()
