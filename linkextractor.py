@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 tweepy_lib_loc = ""
 
+import pymongo
+
 import sys
 sys.path.append(tweepy_lib_loc)
 
@@ -27,6 +29,7 @@ class StatusListener(twpy.streaming.StreamListener):
         self.on_status_cb(status)
 
 import linkstore
+import urlresolver
 
 class LinkExtractor(object):
     link_count_limit = None
@@ -36,11 +39,14 @@ class LinkExtractor(object):
     status_stream = None
 
     link_store = None
+    url_resolver = None
     
     def __init__(self,
                  consumer_key, consumer_secret, access_token,
                  access_token_secret, track, link_count_limit=10):
-        self.link_store = linkstore.LinkStore(track_words=track)
+        conn = pymongo.Connection('localhost', 27017)
+        self.link_store = linkstore.LinkStore(track_words=track, conn=conn)
+        self.url_resolver = urlresolver.URLResolver(conn=conn)
 
         self.status_auth = \
             twpy.auth.OAuthHandler(consumer_key, consumer_secret, secure=True)
@@ -57,10 +63,11 @@ class LinkExtractor(object):
         self.status_stream.disconnect()
 
     def on_status(self, status):
-        self.extract_links(status)
+        self.extract_and_store_links(status)
 
-    def extract_links(self, status):
+    def extract_and_store_links(self, status):
         for link in extract_links(status.text):
+            link, _ = self.url_resolver.lookup_url(link)
             self.link_store.store_link_tweet(link, status)
             
     def stop(self):
