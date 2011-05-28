@@ -107,8 +107,10 @@ class URLResolver(object):
                 continue
 
             timeouts = result.get("timeouts", 0)
-            if timeouts > 0:
-                timeout = 5
+            if timeouts >= 10:
+                self.handle_failed_resolve("timeout limit", url, 500)
+            elif timeouts > 0:
+                timeout = timeouts * 5
             else:
                 timeout = 1
 
