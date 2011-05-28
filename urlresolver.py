@@ -77,6 +77,10 @@ class URLResolver(object):
             if str(e) == "<urlopen error timed out>":
                 self.handle_failed_resolve(e, url, 408)
                 return None
+            elif str(e) == "<urlopen error [Errno 8] nodename nor servname provided, or not known>":
+                # This happens when DNS resolution fails, apparently.
+                self.handle_failed_resolve(e, url, 404)
+                return None
             else:
                 raise e
 
