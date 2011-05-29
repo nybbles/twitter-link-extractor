@@ -7,6 +7,19 @@ import logging
 
 from threading import Thread
 
+import re
+
+class URLResolutionError(Exception):
+    url = None
+    err = None
+    
+    def __init__(self, url, err):
+        self.url = url
+        self.err = err
+
+    def __str__(self):
+        return self.url.encode("latin-1", "replace") + " " + repr(self.err)
+
 class URLResolver(object):
     running = False
     
@@ -50,7 +63,8 @@ class URLResolver(object):
         if code is None:
             code = err.code
 
-        if code == 404 or code == 403: # resource not found/forbidden
+        if code == 404 or code == 403 or code == 401:
+            # resource not found/forbidden/unauthorized
             logging.info("Failed to resolve %s: Not found" % (url))
             if self.inaccessible_url_cb:
                 self.inaccessible_url_cb(url, code)
@@ -64,6 +78,9 @@ class URLResolver(object):
             query = {"url" : url, "resolved" : False}
             update = {"$inc" : {"timeouts" : 1}}
             self.resolved_urls.update(query, update)
+        elif (code == 302 or code == 301) and \
+             re.search("The HTTP server returned a redirect error that would lead to an infinite loop.", str(err)):
+            self.handle_failed_resolve(err, url, 404)
         else:
             raise err
         
@@ -81,8 +98,15 @@ class URLResolver(object):
                 # This happens when DNS resolution fails, apparently.
                 self.handle_failed_resolve(e, url, 404)
                 return None
+            elif str(e) == "<urlopen error _ssl.c:484: The handshake operation timed out>" or \
+                 str(e) == "<urlopen error The read operation timed out>":
+                # SSL handshake timeout and read timeout
+                self.handle_failed_resolve(e, url, 500)
+                return None
             else:
-                raise e
+                raise URLResolutionError(url, e)
+        except UnicodeError as e:
+            raise URLResolutionError(url, e)
 
         self.set_url_as_resolved(url, resolved_url)
         return resolved_url
@@ -107,14 +131,16 @@ class URLResolver(object):
                 continue
 
             timeouts = result.get("timeouts", 0)
+            url = result["url"]
+            
             if timeouts >= 10:
-                self.handle_failed_resolve("timeout limit", url, 500)
+                # After too many timeouts, treat resource as not found.
+                self.handle_failed_resolve("timeout limit", url, 404)
             elif timeouts > 0:
                 timeout = timeouts * 5
             else:
                 timeout = 1
 
-            url = result["url"]
             resolved_url = self.resolve_url(url, timeout)
 
             if resolved_url is None:

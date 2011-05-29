@@ -89,7 +89,7 @@ class LinkExtractor(object):
 # section 2.2, to detect all possible URLs, but it isn't, because this
 # is going to take a lot less time and seems to be what Twitter does.
 import re
-url_extractor_re = re.compile("(?P<url>https?://[^\s#@]+)", re.I | re.U)
+url_extractor_re = re.compile(u"(?P<url>https?://[^\s#@\u201d\u2026]+)", re.I | re.U)
 def extract_links(text, is_truncated):
     links_iter = url_extractor_re.finditer(text)
 
@@ -100,12 +100,14 @@ def extract_links(text, is_truncated):
             if is_truncated:
                 if match.end('url') == 140 - 4:
                     return # probably truncated URL
-                
-            result = match.group('url')
 
-            if result[-1] == u'\u2026':
-                return # url ends with ellipsis
-            
+            result = match.group('url')
+            # remove trailing dots, i.e. ellipsis
+            result = re.sub(u"\.+$", "", result)
+
+            if result == "http://":
+                continue
+
             yield result
     except StopIteration:
         return
